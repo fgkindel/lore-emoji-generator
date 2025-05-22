@@ -1,0 +1,12 @@
+# Basic Netlify configuration for the Lore-to-Emoji Generator
+
+[build]
+  # No build command is needed for this simple static site
+  command = ""
+  # The publish directory is the root, where index.html is located
+  publish = "/"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
