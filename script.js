@@ -2,62 +2,89 @@ document.addEventListener('DOMContentLoaded', () => {
     const loreInput = document.getElementById('lore-input');
     const forgeButton = document.getElementById('forge-button');
     const emojiDisplay = document.getElementById('emoji-display');
+    
+    // Create a status message element or use an existing one if available
+    let statusMessageElement = document.getElementById('save-status-message');
+    if (!statusMessageElement) {
+        statusMessageElement = document.createElement('div');
+        statusMessageElement.id = 'save-status-message';
+        statusMessageElement.style.marginTop = '10px';
+        statusMessageElement.style.fontSize = '0.9em';
+        // Insert it after the button, or adjust as needed
+        forgeButton.parentNode.insertBefore(statusMessageElement, forgeButton.nextSibling);
+    }
 
-    // Basic emoji map (can be expanded or loaded from emojiMap.json later)
-    // For a more "Doomsday Cult for Gamers" vibe, let's add/tweak some:
+    const googleAppScriptUrl = 'https://script.google.com/macros/s/AKfycbxrB2qyfbsJOOpqdKADu2Lmc-N33wnCpX30DID6X6yI8W7smUUYvDLVqVJCczAJ7iFJ/exec';
+
     const basicEmojiMap = {
-        "fire": "🔥",
-        "dragon": "🐉",
-        "glitch": "👾",
-        "buffer": "⏳",
-        "streamer": "🎙️",
-        "ai": "🤖",
-        "cat": "😼",
-        "meme": "😂",
-        "doom": "💀",
-        "cult": "🛐",
-        "gamer": "🎮",
-        "void": "🌌",
-        "oracle": "🔮",
-        "destiny": "✨",
-        "cyber": "💻",
-        "neon": "💡",
-        "data": "💾",
-        "virus": "☣️",
-        "hacker": "🧑‍💻", // Changed from knight
-        "magic": "🪄", // Changed from simple star
-        "love": "💔" // A more cynical take for the theme? Or keep ❤️? Let's try this.
+        "fire": "🔥", "dragon": "🐉", "glitch": "👾", "buffer": "⏳", "streamer": "🎙️",
+        "ai": "🤖", "cat": "😼", "meme": "😂", "doom": "💀", "cult": "🛐",
+        "gamer": "🎮", "void": "🌌", "oracle": "🔮", "destiny": "✨", "cyber": "💻",
+        "neon": "💡", "data": "💾", "virus": "☣️", "hacker": "🧑‍💻", "magic": "🪄",
+        "love": "💔" 
     };
 
-    // Initialize with a default thematic emoji from HTML or set one here
-    // emojiDisplay.textContent = "🔮"; // Already set in HTML
-
     forgeButton.addEventListener('click', () => {
-        const loreText = loreInput.value.toLowerCase();
-        let generatedEmoji = "🤷"; // Default if no specific keyword match - a shrug for the unknown
+        const loreText = loreInput.value; // Keep original case for saving
+        const loreTextLower = loreText.toLowerCase();
+        let generatedEmoji = "🤷"; 
+        statusMessageElement.textContent = ''; // Clear previous status
 
         if (loreText.trim() === "") {
-            generatedEmoji = "🔮"; // Reset to Oracle/initial state
+            generatedEmoji = "🔮";
             emojiDisplay.textContent = generatedEmoji;
+            statusMessageElement.textContent = 'Please enter some lore first!';
+            statusMessageElement.style.color = 'var(--electric-blue)';
             return;
         }
 
         let found = false;
         for (const keyword in basicEmojiMap) {
-            if (loreText.includes(keyword)) {
+            if (loreTextLower.includes(keyword)) {
                 generatedEmoji = basicEmojiMap[keyword];
                 found = true;
-                break; // Use the first match
+                break; 
             }
         }
         
-        // If no keyword matched from our specific map, but text is not empty
-        if (!found && loreText.trim() !== "") {
-            // Simple fallback: cycle through a few generic "mystic" emojis based on text length
+        if (!found) {
             const genericEmojis = ["✨", "🌟", "💫", "💠"];
             generatedEmoji = genericEmojis[loreText.length % genericEmojis.length];
         }
 
         emojiDisplay.textContent = generatedEmoji;
+
+        // Now, try to save it to Google Sheets
+        statusMessageElement.textContent = 'Saving your epic lore...';
+        statusMessageElement.style.color = 'var(--plasma-purple)';
+
+        fetch(googleAppScriptUrl, {
+            method: 'POST',
+            mode: 'cors', // Required for cross-origin requests to Google Apps Script
+            cache: 'no-cache',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            // We need to send the data as a stringified JSON object
+            // that the Google Apps Script e.postData.contents can parse.
+            // The Apps Script expects an object with 'lore' and 'emoji' properties.
+            body: JSON.stringify({ lore: loreText, emoji: generatedEmoji }) 
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.result === "success") {
+                statusMessageElement.textContent = 'Lore preserved in the digital scrolls!';
+                statusMessageElement.style.color = 'var(--neon-pink)';
+            } else {
+                statusMessageElement.textContent = 'Hmm, the Oracle stumbled. (Error saving)';
+                statusMessageElement.style.color = 'var(--hot-magenta)';
+                console.error('Error saving to Google Sheet:', data.message);
+            }
+        })
+        .catch(error => {
+            statusMessageElement.textContent = 'Connection to the Oracle failed. (Network error)';
+            statusMessageElement.style.color = 'var(--hot-magenta)';
+            console.error('Network error when saving to Google Sheet:', error);
+        });
     });
 });
